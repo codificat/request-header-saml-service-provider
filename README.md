@@ -59,22 +59,11 @@ Now create the secret:
 oc secrets new httpd-ose-certs-secret ./httpd-ose-certs
 ```
 
-The saml service provider pod will itself expose a TLS endpoint.  The OpenShift
-Router will use TLS passthrough to allow it to terminate the connection.  For testing purposes a self-signed certificate may be used:
+The saml service provider pod will itself expose a TLS endpoint.
 
-```sh
-mkdir ./httpd-server-certs
-
-# Make sure you input the saml service provider hostname for the Common Name
-openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out ./httpd-server-certs/server.key
-openssl req -new -key ./httpd-server-certs/server.key -out /tmp/server.csr
-openssl x509 -req -days 365 -in /tmp/server.csr -signkey ./httpd-server-certs/server.key -out ./httpd-server-certs/server.crt
-```
-
-Now create the secret:
-```sh
-oc secrets new httpd-server-certs-secret ./httpd-server-certs
-```
+We will use OpenShift's service serving certificates service to automatically
+generate these, and the OpenShift Router will use TLS reencrypt to terminate
+external TLS connections using a route-provided certificate.
 
 Optional: Create a secret for a custom CA (secret and cert names must be unique)
 ```sh
@@ -119,13 +108,6 @@ Mount the secret for OSE certs (authproxy.pem,ca.crt)
 oc volume deploymentconfigs/saml-auth \
      --add --overwrite --name=httpd-ose-certs --mount-path=/etc/httpd/conf/ose_certs \
      --type=secret --secret-name=httpd-ose-certs-secret
-```
-
-Mount the secret for server certs (server.crt,server.key)
-```sh
-oc volume deploymentconfigs/saml-auth \
-     --add --overwrite --name=httpd-server-certs --mount-path=/etc/httpd/conf/server_certs \
-     --type=secret --secret-name=httpd-server-certs-secret
 ```
 
 Optional: Mount the secret for a custom CA cert (duplicate as required)
